@@ -1,0 +1,41 @@
+---
+# tasks file for nginx
+- name: Upgrade all apt packages
+  apt: upgrade=dist force_apt_get=yes
+
+- name: ensure nginx is at the latest version
+  apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+    state: latest
+    update_cache: yes
+
+- name: start nginx
+  service:
+      name: nginx
+      state: started
+
+- name: ansible create directory
+  file:
+    path: /var/www/{{ domain }}/html
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: copy the nginx html file and restart nginx
+  copy:
+    src: templates/index.html.j2
+    dest: /var/www/{{ domain }}/html/index.html
+  become: yes
+
+- name: copy the nginx config file
+  template:
+    src: templates/config.j2
+    dest: /etc/nginx/sites-enabled/{{ domain }}
+  notify: restart Nginx
+
+- name: certbot certificate 
+  command: certbot --nginx -d {{ domain }} --agree-tos --redirect -m {{ mail }}
